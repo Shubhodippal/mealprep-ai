@@ -3,19 +3,33 @@
 A smart cooking to-do list that turns your budget, time, and fridge contents into a
 structured meal plan, grocery list, and substitutions — powered by Anthropic Claude.
 
-## Run locally
+The frontend ([app_cl.html](app_cl.html)) is a static page hosted on GitHub Pages.
+It never sees the API key — it calls a **Cloudflare Worker proxy** ([proxy/](proxy/))
+that holds the key as an encrypted secret and forwards requests to Anthropic.
 
-1. Copy `config.example.js` to `config.js` and add your Anthropic API key:
-   ```js
-   window.ANTHROPIC_API_KEY = "sk-ant-...";
-   ```
-2. Open `app_cl.html` (via a local server like VS Code Live Server, or directly).
+## Deploy the proxy (one time)
 
-> `config.js` is gitignored, so your API key is never committed.
+```bash
+cd proxy
+npx wrangler login                       # opens browser to your Cloudflare account
+npx wrangler secret put ANTHROPIC_API_KEY   # paste your sk-ant-... key when prompted
+npx wrangler deploy
+```
 
-## ⚠️ Note on the live demo
+`wrangler deploy` prints a URL like `https://mealprep-proxy.<you>.workers.dev`.
 
-This is a client-side app that calls the Anthropic API directly from the browser.
-The hosted GitHub Pages version does **not** include an API key on purpose — embedding a
-key in a public site would expose it to anyone. To use it live safely, route requests
-through a small backend proxy that holds the key server-side.
+## Point the frontend at the proxy
+
+In [app_cl.html](app_cl.html), set:
+
+```js
+const PROXY_URL = "https://mealprep-proxy.<you>.workers.dev";
+```
+
+Commit and push — GitHub Pages redeploys automatically.
+
+## Security notes
+
+- The Anthropic key lives only as a Cloudflare Worker secret, never in the repo or browser.
+- The Worker restricts CORS to the allowed origins and to the `claude-opus-4-8` model
+  (see [proxy/worker.js](proxy/worker.js)) to limit abuse. Add your own origins there if needed.

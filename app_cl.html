@@ -147,20 +147,13 @@
         </div>
     </footer>
 
-    <!-- Loads window.ANTHROPIC_API_KEY from a local, untracked file -->
-    <script src="config.js"></script>
     <script>
         const generateBtn = document.getElementById('generateBtn');
         const statusText = document.getElementById('statusText');
 
-        // Read the Anthropic API key provided by config.js
-        function getApiKey() {
-            const key = window.ANTHROPIC_API_KEY;
-            if (!key || key === 'sk-ant-your-key-here') {
-                throw new Error('API key not set. Add it to config.js.');
-            }
-            return key;
-        }
+        // URL of the Cloudflare Worker proxy that holds the Anthropic API key.
+        // After deploying the worker, replace this with your *.workers.dev URL.
+        const PROXY_URL = "REPLACE_WITH_WORKER_URL";
 
         generateBtn.addEventListener('click', async () => {
             const time = document.getElementById('time').value;
@@ -168,21 +161,15 @@
             const diet = document.getElementById('diet').value;
             const pantry = document.getElementById('pantry').value;
 
+            if (PROXY_URL === "REPLACE_WITH_WORKER_URL") {
+                statusText.innerHTML = `<span class="text-red-500 font-medium">Proxy not configured. Set PROXY_URL in app_cl.html.</span>`;
+                return;
+            }
+
             generateBtn.disabled = true;
             generateBtn.innerHTML = `<div class="loader"></div> Generating Plan...`;
             statusText.innerText = "Claude is analyzing pantry and budget constraints...";
 
-            // Load the API key from config.js
-            let apiKey;
-            try {
-                apiKey = getApiKey();
-            } catch (error) {
-                statusText.innerHTML = `<span class="text-red-500 font-medium">${error.message}</span>`;
-                generateBtn.disabled = false;
-                generateBtn.innerHTML = `Generate My Cooking Plan`;
-                return;
-            }
-            
             const prompt = `
                 You are an expert meal prep assistant. Create a cooking to-do list based on the user's day.
                 User constraints:
@@ -230,14 +217,10 @@
             `;
 
             try {
-                const response = await fetch('https://api.anthropic.com/v1/messages', {
+                const response = await fetch(PROXY_URL, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'x-api-key': apiKey,
-                        'anthropic-version': '2023-06-01',
-                        // Required header for browser-based calls to avoid CORS errors
-                        'anthropic-dangerous-direct-browser-access': 'true' 
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                         model: "claude-opus-4-8", // Claude Opus 4.8
