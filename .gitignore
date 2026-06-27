@@ -1,0 +1,5 @@
+# Local secrets (API keys) — keep these out of git
+config.js
+.env
+.env.*
+!.env.example
